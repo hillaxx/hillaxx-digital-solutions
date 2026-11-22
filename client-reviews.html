@@ -1,6 +1,221 @@
-<!doctype html><html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>Client Reviews | HILLAXX</title><link rel="stylesheet" href="portal.css"><style>body{background:#f5f7fb}.rv-wrap{max-width:900px;margin:36px auto;padding:20px}.rv-card{background:#fff;border:1px solid #e4e8ef;border-radius:16px;padding:22px;margin:16px 0}.rv-card input,.rv-card textarea,.rv-card select{width:100%;padding:12px;border:1px solid #d0d5dd;border-radius:9px;margin:7px 0 14px;font:inherit}.rv-btn{padding:11px 16px;border:0;border-radius:9px;background:#172033;color:#fff;font-weight:650;cursor:pointer;margin:4px}.rv-muted{color:#667085}.rv-status{padding:10px;border-radius:9px;background:#f2f4f7;margin:12px 0}</style></head><body><main class="rv-wrap"><p><a href="client-portal.html">← Back to Client Hub</a></p><h1>Share your project experience</h1><p class="rv-muted">Reviews can be submitted for projects marked Completed. Your review is private until an administrator approves it.</p><div id="rv-message" class="rv-status" aria-live="polite">Checking your secure sign-in…</div><section class="rv-card"><h2>Write a review</h2><form id="rv-form"><label for="rv-project">Completed project</label><select id="rv-project" required><option value="">Choose a completed project</option></select><label for="rv-rating">Rating</label><select id="rv-rating" required><option value="5">5 — Excellent</option><option value="4">4 — Very good</option><option value="3">3 — Good</option><option value="2">2 — Fair</option><option value="1">1 — Poor</option></select><label for="rv-text">Your review</label><textarea id="rv-text" rows="5" minlength="10" maxlength="1500" required placeholder="Tell us about your experience…"></textarea><label for="rv-name">Name to display (optional)</label><input id="rv-name" maxlength="80" placeholder="Your preferred display name"><label><input id="rv-show-name" type="checkbox" style="width:auto"> I consent to displaying this name publicly if my review is approved.</label><button class="rv-btn" type="submit">Submit review</button></form></section><section><h2>Your submitted reviews</h2><div id="rv-mine"></div></section></main><script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script><script src="portal-config.js"></script><script>
-(()=>{const $=id=>document.getElementById(id),cfg=window.HILLAXX_PORTAL_CONFIG;let db,user;const msg=(s)=>$('rv-message').textContent=s;
-async function init(){if(!cfg||!window.supabase){msg('Portal configuration could not be loaded.');return;}db=window.supabase.createClient(cfg.supabaseUrl,cfg.supabaseAnonKey);const {data:{session}}=await db.auth.getSession();if(!session){msg('Please sign in through the Client Hub first, then return here.');return;}user=session.user;const {data:p,error:pe}=await db.from('portal_profiles').select('role,status,full_name').eq('id',user.id).single();if(pe||!p||p.role!=='client'||p.status!=='approved'){msg('An approved client account is required to submit a review.');return;}if(p.full_name)$('rv-name').value=p.full_name;const {data:projects,error}=await db.from('portal_projects').select('id,title,status').eq('client_id',user.id).ilike('status','completed').order('created_at',{ascending:false});if(error){msg('Could not load your completed projects: '+error.message);return;}for(const pr of projects||[]){const o=document.createElement('option');o.value=pr.id;o.textContent=pr.title;$('rv-project').append(o);}msg('You are signed in. You may review a completed project.');await loadMine();}
-async function loadMine(){const {data,error}=await db.from('hillaxx_client_reviews').select('id,project_id,rating,review_text,status,display_name,show_name').eq('client_id',user.id).order('created_at',{ascending:false});if(error){$('rv-mine').textContent='Your reviews could not be loaded.';return;}const box=$('rv-mine');box.replaceChildren();for(const r of data||[]){const card=document.createElement('article');card.className='rv-card';const h=document.createElement('h3');h.textContent=`${r.rating}/5 · ${r.status}`;const p=document.createElement('p');p.textContent=r.review_text;card.append(h,p);if(['pending','revision_requested'].includes(r.status)){const edit=document.createElement('button');edit.className='rv-btn';edit.textContent='Edit';edit.onclick=()=>{$('rv-project').value=r.project_id;$('rv-rating').value=String(r.rating);$('rv-text').value=r.review_text;$('rv-name').value=r.display_name||'';$('rv-show-name').checked=!!r.show_name;$('rv-form').dataset.editId=r.id;window.scrollTo({top:0,behavior:'smooth'});};const del=document.createElement('button');del.className='rv-btn';del.textContent='Withdraw';del.onclick=async()=>{if(!confirm('Withdraw this review?'))return;const {error}=await db.from('hillaxx_client_reviews').delete().eq('id',r.id);msg(error?error.message:'Review withdrawn.');await loadMine();};card.append(edit,del);}box.append(card);}}
-$('rv-form').addEventListener('submit',async e=>{e.preventDefault();if(!user)return;const editId=e.currentTarget.dataset.editId;const payload={project_id:$('rv-project').value,rating:Number($('rv-rating').value),review_text:$('rv-text').value.trim(),display_name:$('rv-name').value.trim()||null,show_name:$('rv-show-name').checked};let result;if(editId){result=await db.from('hillaxx_client_reviews').update(payload).eq('id',editId);delete e.currentTarget.dataset.editId;}else result=await db.from('hillaxx_client_reviews').insert({...payload,client_id:user.id});msg(result.error?'Could not save review: '+result.error.message:'Your review has been saved for administrator moderation.');if(!result.error){$('rv-form').reset();await loadMine();}});init();})();
-</script></body></html>
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<meta name="theme-color" content="#142b45">
+<title>Client Reviews | HILLAXX DIGITAL SOLUTIONS</title>
+<link rel="stylesheet" href="portal.css">
+<style>
+:root{--rv-navy:#142b45;--rv-gold:#c79a43;--rv-ink:#26364a;--rv-muted:#6d7c8d;--rv-line:#e2e8ef}
+body{background:linear-gradient(180deg,#f2f5f8 0,#f8fafc 380px);color:var(--rv-ink)}
+.rv-wrap{width:min(920px,100%);margin:34px auto;padding:clamp(16px,3vw,28px)}
+.rv-back{display:inline-flex;align-items:center;gap:8px;color:#31566f;font-weight:750;font-size:13px;margin-bottom:18px}
+.rv-hero{padding:26px 0 22px}
+.rv-kicker{font-size:10px;letter-spacing:.17em;font-weight:850;color:#98702c}
+.rv-hero h1{font:800 clamp(30px,5vw,44px)/1.12 Manrope,'DM Sans',sans-serif;letter-spacing:-.04em;color:var(--rv-navy);margin:10px 0}
+.rv-hero p{max-width:680px;color:var(--rv-muted);line-height:1.75;margin:0}
+.rv-card{background:#fff;border:1px solid var(--rv-line);border-radius:18px;padding:clamp(19px,3vw,27px);margin:17px 0;box-shadow:0 14px 38px rgba(20,43,69,.055)}
+.rv-card h2{font:800 21px Manrope,'DM Sans',sans-serif;color:var(--rv-navy);margin:0 0 17px}
+.rv-card label{display:block;font-size:12px;font-weight:800;color:#42566b;margin:15px 0 7px}
+.rv-card input:not([type=checkbox]):not([type=hidden]),.rv-card textarea,.rv-card select{width:100%;padding:13px 14px;border:1px solid #d6e0e8;border-radius:11px;background:#fbfcfd;color:var(--rv-ink);font:inherit}
+.rv-card textarea{resize:vertical;min-height:130px}
+.rv-card input:focus,.rv-card textarea:focus,.rv-card select:focus{outline:3px solid rgba(199,154,67,.16);border-color:#c79a43}
+.rv-rating{display:flex;align-items:center;gap:7px;flex-wrap:wrap;margin:4px 0 3px}
+.rv-star{appearance:none;border:1px solid #e6eaf0;background:#f8fafc;color:#c7ced7;border-radius:10px;padding:7px 10px;font-size:30px;line-height:1;box-shadow:none;cursor:pointer;transition:background .15s,color .15s,border-color .15s,transform .15s}
+.rv-star:hover{transform:translateY(-1px);background:#fff9eb;border-color:#e3c98e;box-shadow:none}
+.rv-star[aria-checked=true],.rv-star.is-selected{color:#d6a43e;background:#fff8e8;border-color:#e7ca8c}
+.rv-rating-hint{font-size:12px;color:var(--rv-muted);margin-left:6px}
+.rv-consent{display:flex!important;align-items:flex-start;gap:9px;font-weight:550!important;line-height:1.5;margin:15px 0!important}
+.rv-consent input{margin-top:3px;accent-color:#b98a37}
+.rv-btn{padding:12px 17px;border:0;border-radius:10px;background:linear-gradient(135deg,#142b45,#254b68);color:#fff;font-weight:800;cursor:pointer;margin:5px 5px 0 0;box-shadow:0 7px 16px rgba(20,43,69,.13)}
+.rv-btn:hover{filter:brightness(1.08);transform:translateY(-1px)}
+.rv-btn.secondary{background:#eef2f6;color:#29435b;border:1px solid #dce4eb;box-shadow:none}
+.rv-muted{color:var(--rv-muted)}
+.rv-status{padding:13px 15px;border-radius:11px;background:#edf5f5;border:1px solid #d5e8e6;color:#285f5a;margin:12px 0 18px;font-size:13px;font-weight:650;overflow-wrap:anywhere}
+.rv-status.error{background:#fff2ef;border-color:#f0d4ce;color:#9b3328}
+.rv-status:empty{display:none}
+.rv-review-meta{font-size:12px;color:#738194;margin:0 0 8px}
+.rv-review-text{white-space:pre-wrap;overflow-wrap:anywhere;line-height:1.7;color:#3f5063}
+.rv-empty{border:1px dashed #d8e1e9;border-radius:13px;padding:20px;color:#718094;background:#fbfcfd}
+.rv-form-actions{display:flex;gap:9px;flex-wrap:wrap;margin-top:18px}
+@media(max-width:560px){.rv-wrap{margin:18px auto}.rv-card{border-radius:15px}.rv-star{font-size:27px;padding:7px 9px}.rv-rating-hint{width:100%;margin:4px 0 0}}
+</style>
+</head>
+<body>
+<main class="rv-wrap">
+<a class="rv-back" href="client-portal.html">← Back to Client Hub</a>
+<header class="rv-hero">
+<div class="rv-kicker">YOUR FEEDBACK MATTERS</div>
+<h1>Share your project experience</h1>
+<p>Tell us how your project went. Reviews can be submitted for projects marked Completed and remain private until an administrator approves them.</p>
+</header>
+<div id="rv-message" class="rv-status" role="status" aria-live="polite">Checking your secure sign-in…</div>
+<section class="rv-card">
+<h2>Write a review</h2>
+<form id="rv-form">
+<label for="rv-project">Completed project</label>
+<select id="rv-project" required><option value="">Choose a completed project</option></select>
+<label id="rv-rating-label">Your rating</label>
+<div class="rv-rating" id="rv-rating-group" role="radiogroup" aria-labelledby="rv-rating-label">
+<button class="rv-star" type="button" role="radio" aria-checked="false" aria-label="1 out of 5 stars" data-rating="1">★</button>
+<button class="rv-star" type="button" role="radio" aria-checked="false" aria-label="2 out of 5 stars" data-rating="2">★</button>
+<button class="rv-star" type="button" role="radio" aria-checked="false" aria-label="3 out of 5 stars" data-rating="3">★</button>
+<button class="rv-star" type="button" role="radio" aria-checked="false" aria-label="4 out of 5 stars" data-rating="4">★</button>
+<button class="rv-star" type="button" role="radio" aria-checked="true" aria-label="5 out of 5 stars" data-rating="5">★</button>
+<span class="rv-rating-hint" id="rv-rating-hint">5 — Excellent</span>
+</div>
+<input id="rv-rating" type="hidden" value="5">
+<label for="rv-text">Your review</label>
+<textarea id="rv-text" rows="5" minlength="10" maxlength="1500" required placeholder="Tell us about your experience…"></textarea>
+<label for="rv-name">Name to display (optional)</label>
+<input id="rv-name" maxlength="80" placeholder="Your preferred display name">
+<label class="rv-consent"><input id="rv-show-name" type="checkbox"> <span>I consent to displaying this name publicly if my review is approved.</span></label>
+<div class="rv-form-actions"><button class="rv-btn" type="submit" id="rv-submit">Submit review</button></div>
+</form>
+</section>
+<section>
+<div class="rv-card">
+<h2>Your submitted reviews</h2>
+<p class="rv-muted" style="font-size:13px;margin-top:-8px">Pending reviews can be edited or withdrawn. Approved reviews are shown here for your reference.</p>
+<div id="rv-mine"><div class="rv-empty">Your submitted reviews will appear here.</div></div>
+</div>
+</section>
+</main>
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2" onerror="window.__HILLAXX_SUPABASE_LOAD_ERROR=true"></script>
+<script src="portal-config.js" onerror="window.__HILLAXX_CONFIG_LOAD_ERROR=true"></script>
+<script>
+(()=>{
+const $=id=>document.getElementById(id);
+let db,user;
+const ratingLabels={1:'1 — Poor',2:'2 — Fair',3:'3 — Good',4:'4 — Very good',5:'5 — Excellent'};
+function msg(s,bad=false){$('rv-message').textContent=s;$('rv-message').classList.toggle('error',!!bad);}
+function errorText(e){if(!e)return 'Unknown error';return [e.message,e.code&&('Code: '+e.code),e.details,e.hint&&('Hint: '+e.hint)].filter(Boolean).join(' · ');}
+function setRating(value){
+ const n=Math.max(1,Math.min(5,Number(value)||5));
+ $('rv-rating').value=String(n);
+ $('rv-rating-hint').textContent=ratingLabels[n];
+ document.querySelectorAll('[data-rating]').forEach(b=>{
+  const selected=Number(b.dataset.rating)===n;
+  b.setAttribute('aria-checked',String(selected));
+  b.classList.toggle('is-selected',Number(b.dataset.rating)<=n);
+  b.tabIndex=selected?0:-1;
+ });
+}
+document.querySelectorAll('[data-rating]').forEach(b=>{
+ b.addEventListener('click',()=>setRating(b.dataset.rating));
+ b.addEventListener('keydown',e=>{
+  if(!['ArrowLeft','ArrowRight','Home','End'].includes(e.key))return;
+  e.preventDefault();
+  let n=Number($('rv-rating').value);
+  if(e.key==='ArrowLeft')n=Math.max(1,n-1);
+  if(e.key==='ArrowRight')n=Math.min(5,n+1);
+  if(e.key==='Home')n=1;
+  if(e.key==='End')n=5;
+  setRating(n);
+  document.querySelector('[data-rating="'+n+'"]').focus();
+ });
+});
+function diagnose(){
+ if(window.__HILLAXX_CONFIG_LOAD_ERROR){msg('Configuration file could not be loaded. Confirm that portal-config.js is uploaded beside client-reviews.html and that the filename matches exactly.',true);return false;}
+ const cfg=window.HILLAXX_PORTAL_CONFIG;
+ if(!cfg){msg('Portal configuration is missing: portal-config.js loaded but did not define HILLAXX_PORTAL_CONFIG.',true);return false;}
+ if(!cfg.supabaseUrl||!cfg.supabaseAnonKey){msg('Portal configuration is incomplete: both the Supabase project URL and public publishable key are required.',true);return false;}
+ if(!/^https:\/\/[a-z0-9-]+\.supabase\.co$/i.test(cfg.supabaseUrl)){msg('The Supabase project URL in portal-config.js is not in the expected format.',true);return false;}
+ if(window.__HILLAXX_SUPABASE_LOAD_ERROR||!window.supabase){msg('The Supabase browser library did not load. Check the network connection, CDN access or browser content blockers, then reload.',true);return false;}
+ return true;
+}
+async function init(){
+ try{
+  if(!diagnose())return;
+  const cfg=window.HILLAXX_PORTAL_CONFIG;
+  db=window.supabase.createClient(cfg.supabaseUrl,cfg.supabaseAnonKey);
+  const {data:sessionData,error:sessionError}=await db.auth.getSession();
+  if(sessionError){msg('Could not check your sign-in session: '+errorText(sessionError),true);return;}
+  const session=sessionData&&sessionData.session;
+  if(!session){msg('Please sign in through the Client Hub first, then return here.');return;}
+  user=session.user;
+  const {data:p,error:pe}=await db.from('portal_profiles').select('role,status,full_name').eq('id',user.id).single();
+  if(pe){msg('Could not verify your client account: '+errorText(pe),true);return;}
+  if(!p||p.role!=='client'||p.status!=='approved'){msg('An approved client account is required to submit a review.',true);return;}
+  if(p.full_name)$('rv-name').value=p.full_name;
+  const {data:projects,error}=await db.from('portal_projects').select('id,title,status').eq('client_id',user.id).ilike('status','completed').order('created_at',{ascending:false});
+  if(error){msg('Could not load your completed projects: '+errorText(error),true);return;}
+  const select=$('rv-project');
+  select.replaceChildren(new Option('Choose a completed project',''));
+  for(const pr of projects||[])select.add(new Option(pr.title,pr.id));
+  if(!projects||!projects.length)msg('You are signed in, but no completed projects are currently assigned to your account.');
+  else msg('You are signed in. Select a completed project and share your experience.');
+  await loadMine();
+ }catch(e){msg('The review page could not finish loading: '+errorText(e),true);}
+}
+async function loadMine(){
+ if(!db||!user)return;
+ const box=$('rv-mine');box.textContent='Loading your reviews…';
+ try{
+  const {data,error}=await db.from('hillaxx_client_reviews').select('id,project_id,rating,review_text,status,display_name,show_name').eq('client_id',user.id).order('created_at',{ascending:false});
+  if(error){box.replaceChildren();const p=document.createElement('p');p.className='rv-empty';p.textContent='Could not load your submitted reviews. '+errorText(error);box.append(p);return;}
+  box.replaceChildren();
+  if(!data||!data.length){const empty=document.createElement('div');empty.className='rv-empty';empty.textContent='You have not submitted a review yet.';box.append(empty);return;}
+  for(const r of data){
+   const card=document.createElement('article');card.className='rv-card';
+   const h=document.createElement('h3');h.textContent=`${r.rating}/5 · ${r.status}`;
+   const meta=document.createElement('p');meta.className='rv-review-meta';meta.textContent=r.show_name&&r.display_name?'Public display name: '+r.display_name:'Public attribution: Verified client';
+   const p=document.createElement('p');p.className='rv-review-text';p.textContent=r.review_text;
+   card.append(h,meta,p);
+   if(['pending','revision_requested'].includes(r.status)){
+    const edit=document.createElement('button');edit.className='rv-btn';edit.textContent='Edit review';edit.onclick=()=>{
+     $('rv-project').value=r.project_id;
+     setRating(r.rating);
+     $('rv-text').value=r.review_text;
+     $('rv-name').value=r.display_name||'';
+     $('rv-show-name').checked=!!r.show_name;
+     $('rv-form').dataset.editId=r.id;
+     $('rv-submit').textContent='Save changes';
+     window.scrollTo({top:0,behavior:'smooth'});
+    };
+    const del=document.createElement('button');del.className='rv-btn secondary';del.textContent='Withdraw review';del.onclick=async()=>{
+     if(!confirm('Withdraw this review?'))return;
+     const {error}=await db.from('hillaxx_client_reviews').delete().eq('id',r.id).eq('client_id',user.id);
+     msg(error?'Could not withdraw review: '+errorText(error):'Review withdrawn.',!!error);
+     if(!error)await loadMine();
+    };
+    card.append(edit,del);
+   }
+   box.append(card);
+  }
+ }catch(e){box.replaceChildren();const p=document.createElement('p');p.className='rv-empty';p.textContent='Could not load your submitted reviews. '+errorText(e);box.append(p);}
+}
+$('rv-form').addEventListener('submit',async e=>{
+ e.preventDefault();
+ const form=e.currentTarget;
+ if(!user||!db){msg('Sign in through the Client Hub before submitting a review.',true);return;}
+ const projectId=$('rv-project').value;
+ const rating=Number($('rv-rating').value);
+ const reviewText=$('rv-text').value.trim();
+ if(!projectId){msg('Choose one of your completed projects before submitting.',true);return;}
+ if(rating<1||rating>5){msg('Choose a star rating before submitting.',true);return;}
+ if(reviewText.length<10){msg('Please write at least 10 characters in your review.',true);return;}
+ const btn=$('rv-submit');btn.disabled=true;btn.textContent='Saving review…';
+ const editId=form.dataset.editId;
+ const payload={project_id:projectId,rating,review_text:reviewText,display_name:$('rv-name').value.trim()||null,show_name:$('rv-show-name').checked};
+ try{
+  let result;
+  if(editId)result=await db.from('hillaxx_client_reviews').update(payload).eq('id',editId).eq('client_id',user.id);
+  else result=await db.from('hillaxx_client_reviews').insert({...payload,client_id:user.id});
+  if(result.error){msg('Could not save your review: '+errorText(result.error),true);}
+  else{
+   delete form.dataset.editId;
+   msg('Your review has been saved for administrator moderation.');
+   $('rv-form').reset();setRating(5);
+   await loadMine();
+  }
+ }catch(err){msg('Could not save your review: '+errorText(err),true);}
+ finally{btn.disabled=false;if(!form.dataset.editId)btn.textContent='Submit review';else btn.textContent='Save changes';}
+});
+setRating(5);
+init();
+})();
+</script>
+</body>
+</html>

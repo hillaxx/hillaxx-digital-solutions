@@ -14,6 +14,60 @@ h1{color:var(--navy);font-size:clamp(28px,4vw,42px);letter-spacing:-.035em;margi
 #msg{border-left:4px solid var(--gold)}
 .hide-explanatory{display:none!important}
 @media(max-width:600px){.wrap{margin:20px auto;padding:14px}.card{padding:17px}.btn{margin:4px 3px}}
-</style></head><body><main class="wrap"><p><a href="portal-admin.html">← Back to Admin Dashboard</a></p><h1>Client review moderation</h1><p class="muted hide-explanatory">Only an approved HILLAXX administrator can access moderation actions.</p><div class="card" id="msg">Checking administrator access…</div><div id="reviews"></div></main><script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script><script src="portal-config.js"></script><script>
-(()=>{const $=id=>document.getElementById(id),cfg=window.HILLAXX_PORTAL_CONFIG;let db;function note(t){$('msg').textContent=t;}async function init(){if(!cfg||!window.supabase){note('Configuration unavailable.');return;}db=window.supabase.createClient(cfg.supabaseUrl,cfg.supabaseAnonKey);const {data:{session}}=await db.auth.getSession();if(!session){note('Sign in through the Admin Dashboard first.');return;}const {data:p,error}=await db.from('portal_profiles').select('role,status').eq('id',session.user.id).single();if(error||!p||p.role!=='admin'||p.status!=='approved'){note('Administrator access required.');return;}note('Administrator verified. Reviews awaiting action are shown below.');await load();}async function load(){const {data,error}=await db.from('hillaxx_client_reviews').select('id,rating,review_text,display_name,show_name,status,featured,created_at,project_id,client_id').order('created_at',{ascending:false});if(error){note('Could not load reviews: '+error.message);return;}const box=$('reviews');box.replaceChildren();for(const r of data||[]){const c=document.createElement('article');c.className='card';const title=document.createElement('h3');title.textContent=`${r.rating}/5 · ${r.status}${r.featured?' · Featured':''}`;const body=document.createElement('p');body.textContent=r.review_text;const name=document.createElement('p');name.textContent=r.show_name&&r.display_name?'Public name: '+r.display_name:'Public attribution: Verified client';const actions=document.createElement('div');for(const [label,status] of [['Approve','approved'],['Reject','rejected'],['Request revision','revision_requested']]){const b=document.createElement('button');b.className='btn';b.textContent=label;b.onclick=()=>change(r.id,{status});actions.append(b);}const feature=document.createElement('button');feature.className='btn';feature.textContent=r.featured?'Remove feature':'Feature';feature.onclick=()=>change(r.id,{featured:!r.featured});actions.append(feature);c.append(title,body,name,actions);box.append(c);}}async function change(id,patch){const {error}=await db.from('hillaxx_client_reviews').update(patch).eq('id',id);note(error?'Action failed: '+error.message:'Review updated.');if(!error)await load();}init();})();
+</style></head><body><main class="wrap"><p><a href="portal-admin.html">← Back to Admin Dashboard</a></p><h1>Client review moderation</h1><p class="muted hide-explanatory">Only an approved HILLAXX administrator can access moderation actions.</p><div class="card" id="msg">Checking administrator access…</div><div id="reviews"></div></main><script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2" onerror="window.__HILLAXX_SUPABASE_LOAD_ERROR=true"></script><script src="portal-config.js" onerror="window.__HILLAXX_CONFIG_LOAD_ERROR=true"></script><script>
+(()=>{
+const $=id=>document.getElementById(id),cfg=window.HILLAXX_PORTAL_CONFIG;
+let db;
+function note(t){$('msg').textContent=t;}
+function errorText(e){if(!e)return 'Unknown error';return [e.message,e.code&&('Code: '+e.code),e.details,e.hint&&('Hint: '+e.hint)].filter(Boolean).join(' · ');}
+function diagnose(){
+ if(window.__HILLAXX_CONFIG_LOAD_ERROR){note('Configuration file could not be loaded: portal-config.js. Make sure it is uploaded beside review-admin-premium.html and that the filename uses the exact same spelling.');return false;}
+ if(!cfg){note('Configuration is missing: portal-config.js loaded, but window.HILLAXX_PORTAL_CONFIG was not defined. Check that the deployed file is the correct portal-config.js.');return false;}
+ if(!cfg.supabaseUrl||!cfg.supabaseAnonKey){note('Configuration is incomplete: portal-config.js must define both supabaseUrl and supabaseAnonKey.');return false;}
+ if(!/^https:\/\/[a-z0-9-]+\.supabase\.co$/i.test(cfg.supabaseUrl)){note('Supabase URL is invalid in portal-config.js. Check the project URL format.');return false;}
+ if(window.__HILLAXX_SUPABASE_LOAD_ERROR||!window.supabase){note('Supabase JavaScript library did not load. Check the internet connection, CDN access, or browser content blockers, then reload this page.');return false;}
+ return true;
+}
+async function init(){
+ if(!diagnose())return;
+ try{
+  db=window.supabase.createClient(cfg.supabaseUrl,cfg.supabaseAnonKey);
+  const {data:{session},error:sessionError}=await db.auth.getSession();
+  if(sessionError){note('Could not check the sign-in session: '+errorText(sessionError));return;}
+  if(!session){note('Sign in through the Admin Dashboard first.');return;}
+  const {data:p,error}=await db.from('portal_profiles').select('role,status').eq('id',session.user.id).single();
+  if(error){note('Could not verify administrator access: '+errorText(error));return;}
+  if(!p||p.role!=='admin'||p.status!=='approved'){note('Administrator access required.');return;}
+  note('Administrator verified. Reviews awaiting action are shown below.');
+  await load();
+ }catch(e){note('Review moderation could not start: '+errorText(e));}
+}
+async function load(){
+ try{
+  const {data,error}=await db.from('hillaxx_client_reviews').select('id,rating,review_text,display_name,show_name,status,featured,created_at,project_id,client_id').order('created_at',{ascending:false});
+  if(error){note('Could not load reviews: '+errorText(error));return;}
+  const box=$('reviews');box.replaceChildren();
+  for(const r of data||[]){
+   const c=document.createElement('article');c.className='card';
+   const title=document.createElement('h3');title.textContent=`${r.rating}/5 · ${r.status}${r.featured?' · Featured':''}`;
+   const body=document.createElement('p');body.textContent=r.review_text;
+   const name=document.createElement('p');name.textContent=r.show_name&&r.display_name?'Public name: '+r.display_name:'Public attribution: Verified client';
+   const actions=document.createElement('div');
+   for(const [label,status] of [['Approve','approved'],['Reject','rejected'],['Request revision','revision_requested']]){
+    const b=document.createElement('button');b.className='btn';b.textContent=label;b.onclick=()=>change(r.id,{status});actions.append(b);
+   }
+   const feature=document.createElement('button');feature.className='btn';feature.textContent=r.featured?'Remove feature':'Feature';feature.onclick=()=>change(r.id,{featured:!r.featured});actions.append(feature);
+   c.append(title,body,name,actions);box.append(c);
+  }
+ }catch(e){note('Could not load reviews: '+(e&&e.message?e.message:'Unexpected error'));}
+}
+async function change(id,patch){
+ try{
+  const {error}=await db.from('hillaxx_client_reviews').update(patch).eq('id',id);
+  note(error?'Action failed: '+errorText(error):'Review updated.');
+  if(!error)await load();
+ }catch(e){note('Action failed: '+errorText(e));}
+}
+init();
+})();
 </script></body></html>
