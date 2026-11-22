@@ -27,3 +27,7 @@ button,a{-webkit-tap-highlight-color:transparent;touch-action:manipulation}
 input,select,textarea{max-width:100%}
 @media(max-width:760px){.container,.wrap,.portal-shell{max-width:100%;min-width:0}.table-wrap{max-width:100%;overflow-x:auto;-webkit-overflow-scrolling:touch}}
 @media(prefers-reduced-motion:reduce){*,*:before,*:after{scroll-behavior:auto!important;transition:none!important;animation:none!important}}
+
+/* Portfolio Manager additions */
+.portfolio-previews,.portfolio-admin-thumbs{display:flex;flex-wrap:wrap;gap:10px;margin:12px 0}.portfolio-previews figure{margin:0;width:112px}.portfolio-previews img,.portfolio-admin-thumbs img{display:block;width:112px;height:88px;object-fit:cover;border:1px solid #dce5ec;border-radius:10px;background:#f3f6f8}.portfolio-previews figcaption{font-size:10px;color:#68798a;overflow-wrap:anywhere}.portfolio-admin-actions{display:flex;flex-wrap:wrap;gap:7px}.portfolio-admin-actions button{font-size:11px;padding:8px 11px;margin:0}.portfolio-admin-item>p{white-space:pre-wrap}.admin-portal #portfolioTab{margin-top:0}.admin-portal #portfolioTab .grid{gap:12px}.admin-portal #portfolioTab .field{margin:8px 0 12px}.admin-portal #portfolioTab .row label{display:inline-flex;align-items:center;gap:7px;margin-right:14px;font-weight:700;color:#43586c}.admin-portal #portfolioTab input[type=checkbox]{width:auto;min-height:0}
+@media(max-width:640px){.portfolio-admin-actions{width:100%}.portfolio-admin-actions button{flex:1}.portfolio-previews figure{width:calc(33.333% - 7px)}.portfolio-previews img{width:100%;height:82px}}

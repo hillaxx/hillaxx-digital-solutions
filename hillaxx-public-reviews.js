@@ -5,7 +5,7 @@ if (typeof ServiceWorkerGlobalScope !== 'undefined' && self instanceof ServiceWo
  const CACHE_NAME = 'hillaxx-public-shell-v2';
  const SHELL = [
   '/', '/index.html', '/privacy-premium.html', '/terms-premium.html',
-  '/client-reviews.html', '/portal.css', '/portal-config.js',
+  '/client-reviews', '/client-reviews.html', '/portal.css', '/portal-config.js',
   '/hillaxx-public-reviews.js'
  ];
  const cacheable = response => response && response.status === 200 &&

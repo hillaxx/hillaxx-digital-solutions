@@ -422,27 +422,31 @@ footer{background:#10263D!important}
 </style>
 <script id="hillaxx-portfolio-filter-script">
 (()=>{'use strict';
- const root=document.getElementById('projects');
- const buttons=[...document.querySelectorAll('#hxPortfolioFilters [data-portfolio-filter]')];
- const cards=[...document.querySelectorAll('#hxProjectGrid [data-portfolio-category]')];
- const status=document.getElementById('hxPortfolioStatus');
- if(!root||!buttons.length||!cards.length||!status)return;
- const names={all:'all project categories',website:'website projects',application:'application and business-system projects',ecommerce:'online store projects',demonstration:'interactive demonstrations'};
- const destinations={all:'#hxProjectGrid',website:'#hxIlatuProjectSlides',application:'#hxIwdaProjectSlides',ecommerce:'#hxJoselleProjectSlides',demonstration:'#demonstrations'};
- const counts={all:cards.length};
- cards.forEach(card=>{const key=card.dataset.portfolioCategory;counts[key]=(counts[key]||0)+1});
- buttons.forEach(button=>{const key=button.dataset.portfolioFilter;const count=counts[key]||0;const badge=button.querySelector('[data-filter-count]');if(badge)badge.textContent=String(count);button.disabled=count===0;button.setAttribute('aria-label',`${button.querySelector('span')?.textContent.trim()||key}: ${count} ${count===1?'project':'projects'}`)});
- const applyFilter=(selected,shouldNavigate=false)=>{
-  const activeButton=buttons.find(button=>button.dataset.portfolioFilter===selected)||buttons[0];
-  const activeKey=activeButton.dataset.portfolioFilter;
-  buttons.forEach(button=>{const active=button===activeButton;button.classList.toggle('is-active',active);button.setAttribute('aria-pressed',active?'true':'false')});
-  let visible=0;
-  cards.forEach(card=>{const show=activeKey==='all'||card.dataset.portfolioCategory===activeKey;card.hidden=!show;if(show)visible++});
-  status.textContent=visible===0?`No ${names[activeKey]||'projects'} are published in this category yet.`:`Showing ${visible} ${visible===1?'project':'projects'} in ${names[activeKey]||'this category'}. ${shouldNavigate?'Opening the matching project slides.':'Select a category to jump directly to its project slides.'}`;
-  if(shouldNavigate&&visible){const destination=document.querySelector(destinations[activeKey]||destinations.all);if(destination){window.setTimeout(()=>destination.scrollIntoView({behavior:window.matchMedia('(prefers-reduced-motion: reduce)').matches?'auto':'smooth',block:'start'}),40)}}
+ const initPortfolioFilters=()=>{
+  const root=document.getElementById('projects');
+  const buttons=[...document.querySelectorAll('#hxPortfolioFilters [data-portfolio-filter]')];
+  const cards=[...document.querySelectorAll('#hxProjectGrid [data-portfolio-category]')];
+  const status=document.getElementById('hxPortfolioStatus');
+  if(!root||!buttons.length||!cards.length||!status)return;
+  const names={all:'all project categories',website:'website projects',application:'application and business-system projects',ecommerce:'online store projects',demonstration:'interactive demonstrations'};
+  const destinations={all:'#hxProjectGrid',website:'#hxIlatuProjectSlides',application:'#hxIwdaProjectSlides',ecommerce:'#hxJoselleProjectSlides',demonstration:'#demonstrations'};
+  const counts={all:cards.length};
+  cards.forEach(card=>{const key=card.dataset.portfolioCategory;counts[key]=(counts[key]||0)+1});
+  buttons.forEach(button=>{const key=button.dataset.portfolioFilter;const count=counts[key]||0;const badge=button.querySelector('[data-filter-count]');if(badge)badge.textContent=String(count);button.disabled=count===0;button.setAttribute('aria-label',`${button.querySelector('span')?.textContent.trim()||key}: ${count} ${count===1?'project':'projects'}`)});
+  const applyFilter=(selected,shouldNavigate=false)=>{
+   const activeButton=buttons.find(button=>button.dataset.portfolioFilter===selected)||buttons[0];
+   const activeKey=activeButton.dataset.portfolioFilter;
+   buttons.forEach(button=>{const active=button===activeButton;button.classList.toggle('is-active',active);button.setAttribute('aria-pressed',active?'true':'false')});
+   let visible=0;
+   cards.forEach(card=>{const show=activeKey==='all'||card.dataset.portfolioCategory===activeKey;card.hidden=!show;if(show)visible++});
+   status.textContent=visible===0?`No ${names[activeKey]||'projects'} are published in this category yet.`:`Showing ${visible} ${visible===1?'project':'projects'} in ${names[activeKey]||'this category'}. ${shouldNavigate?'Opening the matching project slides.':'Select a category to jump directly to its project slides.'}`;
+   if(shouldNavigate&&visible){const destination=document.querySelector(destinations[activeKey]||destinations.all);if(destination){window.setTimeout(()=>destination.scrollIntoView({behavior:window.matchMedia('(prefers-reduced-motion: reduce)').matches?'auto':'smooth',block:'start'}),40)}}
+  };
+  buttons.forEach(button=>button.addEventListener('click',()=>applyFilter(button.dataset.portfolioFilter,true)));
+  applyFilter('all');
  };
- buttons.forEach(button=>button.addEventListener('click',()=>applyFilter(button.dataset.portfolioFilter,true)));
- applyFilter('all');
+ if(document.readyState==='loading')document.addEventListener('DOMContentLoaded',initPortfolioFilters,{once:true});
+ else initPortfolioFilters();
 })();
 </script>
 
@@ -833,7 +837,6 @@ renderBookings();
  render();
 })();
 </script>
-<!-- END STAGE 6 CLIENT WORKFLOW -->
 <script id="hillaxx-stage7-event-bridge">
 (()=>{
   'use strict';
@@ -924,4 +927,11 @@ document.addEventListener('keydown',event=>{if(event.key==='Escape'){const nav=d
 })();
 </script>
 
+<script id="hillaxx-dynamic-portfolio">
+(()=>{'use strict';const root=document.getElementById('hxProjectGrid');if(!root)return;const esc=v=>String(v??'').replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));const safeUrl=v=>{try{const u=new URL(v,location.href);return ['https:','http:'].includes(u.protocol)?u.href:''}catch(_){return ''}};let sb=null;const loadScript=src=>new Promise((resolve,reject)=>{const el=document.createElement('script');el.src=src;el.onload=resolve;el.onerror=()=>reject(new Error('Could not load '+src));document.head.appendChild(el)});
+function render(projects){const old=[...root.querySelectorAll('[data-dynamic-portfolio]')];old.forEach(x=>x.remove());projects.forEach(p=>{const images=Array.isArray(p.gallery_images)?p.gallery_images:[];const slides=images.map(x=>typeof x==='string'?{url:x,alt:p.image_alt||p.title}:x).filter(x=>x&&safeUrl(x.url));if(!slides.length&&p.image_url)slides.push({url:p.image_url,alt:p.image_alt||p.title});const card=document.createElement('article');card.className='project-card hx-dynamic-project';card.dataset.dynamicPortfolio='true';card.dataset.portfolioCategory=p.category;const shots=slides.map((im,i)=>`<figure class="hx-dynamic-slide"><img src="${esc(safeUrl(im.url))}" alt="${esc(im.alt||p.title+' screenshot '+(i+1))}" loading="lazy" decoding="async"><figcaption>${esc(im.caption||('Slide '+(i+1)+' of '+slides.length))}</figcaption></figure>`).join('');const tech=Array.isArray(p.technologies)?p.technologies:[];const link=safeUrl(p.project_url||'');card.innerHTML=`<div class="project-content"><div class="project-meta"><span class="project-tag">${esc(({website:'Website',application:'Application &amp; business system',ecommerce:'Online store',demonstration:'Interactive demonstration'})[p.category]||'Project')}</span>${p.featured?'<span class="project-tag">Featured</span>':''}</div><h3>${esc(p.title)}</h3><p>${esc(p.description||'Explore this project by HILLAXX DIGITAL SOLUTIONS.')}</p>${tech.length?`<p class="hx-dynamic-tech">${tech.map(t=>`<span>${esc(t)}</span>`).join('')}</p>`:''}</div>${slides.length?`<div class="hx-dynamic-gallery" aria-label="${esc(p.title)} screenshots">${shots}</div>`:''}${link?`<div class="project-live-panel"><a class="project-live-domain" href="${esc(link)}" target="_blank" rel="noopener noreferrer">View project ↗</a></div>`:''}`;root.append(card)})}
+async function load(){try{const {data,error}=await sb.from('portfolio_showcase_projects').select('id,title,category,description,image_url,project_url,gallery_images,technologies,sort_order,featured,image_alt').eq('published',true).eq('archived',false).order('sort_order',{ascending:true}).order('created_at',{ascending:false});if(error){const st=document.getElementById('hxPortfolioStatus');if(st)st.textContent='Showing the existing featured portfolio. Additional projects are temporarily unavailable.';return}render(data||[]);const buttons=[...document.querySelectorAll('#hxPortfolioFilters [data-portfolio-filter]')];const cards=[...root.querySelectorAll('[data-portfolio-category]')];const counts={all:cards.length};cards.forEach(c=>counts[c.dataset.portfolioCategory]=(counts[c.dataset.portfolioCategory]||0)+1);buttons.forEach(b=>{const k=b.dataset.portfolioFilter,el=b.querySelector('[data-filter-count]');if(el)el.textContent=String(counts[k]||0);b.disabled=!(counts[k]||0)});const apply=k=>{const active=buttons.find(b=>b.dataset.portfolioFilter===k)||buttons[0];buttons.forEach(b=>{const on=b===active;b.classList.toggle('is-active',on);b.setAttribute('aria-pressed',String(on))});let shown=0;cards.forEach(c=>{c.hidden=!(k==='all'||c.dataset.portfolioCategory===k);if(!c.hidden)shown++});const st=document.getElementById('hxPortfolioStatus');if(st)st.textContent=`Showing ${shown} ${shown===1?'project':'projects'} in ${k==='all'?'all project categories':k}.`;};buttons.forEach(b=>{if(!b.dataset.dynamicBound){b.dataset.dynamicBound='1';b.addEventListener('click',()=>apply(b.dataset.portfolioFilter))}});apply('all');document.dispatchEvent(new CustomEvent('hillaxx:portfolio-updated'))}catch(_){/* Keep the complete embedded portfolio available if the network is unavailable. */}}
+(async()=>{try{await loadScript('https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2');await loadScript('portal-config.js');const cfg=window.HILLAXX_PORTAL_CONFIG||{};if(!window.supabase||!cfg.supabaseUrl||!cfg.supabaseAnonKey)return;sb=window.supabase.createClient(cfg.supabaseUrl,cfg.supabaseAnonKey);await load()}catch(_){/* Embedded project content remains available offline or if the service is unavailable. */}})();})();
+</script>
+<style id="hillaxx-dynamic-portfolio-styles">.hx-dynamic-project{overflow:hidden}.hx-dynamic-gallery{display:flex;gap:12px;overflow-x:auto;padding:0 20px 18px;scroll-snap-type:x mandatory;-webkit-overflow-scrolling:touch}.hx-dynamic-slide{flex:0 0 min(78%,290px);margin:0;scroll-snap-align:start}.hx-dynamic-slide img{display:block;width:100%;height:260px;object-fit:contain;background:#f3f6f8;border:1px solid #e1e8ee;border-radius:12px}.hx-dynamic-slide figcaption{font-size:11px;color:#68798a;padding:6px 2px}.hx-dynamic-tech{display:flex;flex-wrap:wrap;gap:6px}.hx-dynamic-tech span{font-size:10px;font-weight:800;color:#29455f;background:#eef3f6;border-radius:999px;padding:5px 8px}@media(max-width:600px){.hx-dynamic-slide{flex-basis:84%}.hx-dynamic-slide img{height:230px}}</style>
 </body></html>
