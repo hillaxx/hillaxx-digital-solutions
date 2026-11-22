@@ -1,79 +1,5 @@
-/* HILLAXX dual-purpose public reviews script + offline service worker.
-   The page script runs normally; when registered as a service worker it provides
-   a small, conservative offline cache for public site assets and pages. */
-if (typeof ServiceWorkerGlobalScope !== 'undefined' && self instanceof ServiceWorkerGlobalScope) {
- const CACHE_NAME = 'hillaxx-public-shell-v2';
- const SHELL = [
-  '/', '/index.html', '/privacy-premium.html', '/terms-premium.html',
-  '/client-reviews', '/client-reviews.html', '/portal.css', '/portal-config.js',
-  '/hillaxx-public-reviews.js'
- ];
- const cacheable = response => response && response.status === 200 &&
-  (response.type === 'basic' || response.type === 'default');
- self.addEventListener('install', event => {
-  event.waitUntil((async () => {
-   const cache = await caches.open(CACHE_NAME);
-   await Promise.allSettled(SHELL.map(async path => {
-    try { const response = await fetch(path, {cache:'reload'}); if (cacheable(response)) await cache.put(path, response); }
-    catch (_) { /* One missing optional page must not block installation. */ }
-   }));
-   await self.skipWaiting();
-  })());
- });
- self.addEventListener('activate', event => {
-  event.waitUntil((async () => {
-   const names = await caches.keys();
-   await Promise.all(names.filter(name => name.startsWith('hillaxx-public-shell-') && name !== CACHE_NAME).map(name => caches.delete(name)));
-   await self.clients.claim();
-  })());
- });
- self.addEventListener('fetch', event => {
-  const request = event.request;
-  if (request.method !== 'GET' || request.headers.has('range')) return;
-  const url = new URL(request.url);
-  if (url.origin !== self.location.origin) return;
-  if (/\/(?:api|auth|rest|storage|functions)(?:\/|$)/i.test(url.pathname)) return;
-  if (request.mode === 'navigate') {
-   event.respondWith((async () => {
-    const cache = await caches.open(CACHE_NAME);
-    const cached = await cache.match(request) || await cache.match(url.pathname === '/' ? '/index.html' : url.pathname);
-    try {
-     let response;
-     if (cached) {
-      const controller = new AbortController();
-      const timer = setTimeout(() => controller.abort(), 4500);
-      try { response = await fetch(request, {signal:controller.signal}); }
-      finally { clearTimeout(timer); }
-     } else {
-      // On a visitor's first visit, do not impose a timeout that could make a slow
-      // connection worse; let the initial page request complete normally.
-      response = await fetch(request);
-     }
-     if (cacheable(response)) await cache.put(request, response.clone());
-     return response.ok || !cached ? response : cached;
-    } catch (_) {
-     return cached || ((url.pathname === '/' || url.pathname === '/index.html') ? await cache.match('/index.html') : null) || new Response('This page is not saved for offline use. Reconnect to the internet and try again.', {status:503,headers:{'Content-Type':'text/plain; charset=utf-8'}});
-    }
-   })());
-   return;
-  }
-  if (!/\.(?:css|js|png|jpe?g|webp|avif|svg|woff2?|ttf|ico)$/i.test(url.pathname)) return;
-  event.respondWith((async () => {
-   const cache = await caches.open(CACHE_NAME);
-   const cached = await cache.match(request);
-   if (cached) return cached;
-   try {
-    const response = await fetch(request);
-    if (cacheable(response)) await cache.put(request, response.clone());
-    return response;
-   } catch (_) {
-    return new Response('', {status:504,statusText:'Offline'});
-   }
-  })());
- });
-} else {
-(()=>{
- const list=document.getElementById('hillaxx-review-list'),summary=document.getElementById('hillaxx-review-summary');
+/* HILLAXX public approved-reviews loader. Offline service-worker functionality removed. */
+(()=>{'use strict';const list= document.getElementById('hillaxx-review-list'),summary=document.getElementById('hillaxx-review-summary');
  if(!list||!summary)return;
  const cfg=window.HILLAXX_PORTAL_CONFIG;
  if(!cfg||!cfg.supabaseUrl||!cfg.supabaseAnonKey||!window.supabase){summary.textContent='Client reviews are temporarily unavailable because the review service is not configured.';list.replaceChildren();return;}
@@ -100,5 +26,3 @@ if (typeof ServiceWorkerGlobalScope !== 'undefined' && self instanceof ServiceWo
  load();
  try{db.channel('hillaxx-public-reviews').on('postgres_changes',{event:'*',schema:'public',table:'hillaxx_client_reviews',filter:'status=eq.approved'},load).subscribe();}catch(_){ }
 })();
-
-}
