@@ -15,5 +15,3 @@
 /hillaxx-public-reviews.js
   Cache-Control: no-cache
 
-/assets/images/*
-  Cache-Control: public, max-age=31536000, immutable

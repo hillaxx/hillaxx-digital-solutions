@@ -31,3 +31,9 @@ input,select,textarea{max-width:100%}
 /* Portfolio Manager additions */
 .portfolio-previews,.portfolio-admin-thumbs{display:flex;flex-wrap:wrap;gap:10px;margin:12px 0}.portfolio-previews figure{margin:0;width:112px}.portfolio-previews img,.portfolio-admin-thumbs img{display:block;width:112px;height:88px;object-fit:cover;border:1px solid #dce5ec;border-radius:10px;background:#f3f6f8}.portfolio-previews figcaption{font-size:10px;color:#68798a;overflow-wrap:anywhere}.portfolio-admin-actions{display:flex;flex-wrap:wrap;gap:7px}.portfolio-admin-actions button{font-size:11px;padding:8px 11px;margin:0}.portfolio-admin-item>p{white-space:pre-wrap}.admin-portal #portfolioTab{margin-top:0}.admin-portal #portfolioTab .grid{gap:12px}.admin-portal #portfolioTab .field{margin:8px 0 12px}.admin-portal #portfolioTab .row label{display:inline-flex;align-items:center;gap:7px;margin-right:14px;font-weight:700;color:#43586c}.admin-portal #portfolioTab input[type=checkbox]{width:auto;min-height:0}
 @media(max-width:640px){.portfolio-admin-actions{width:100%}.portfolio-admin-actions button{flex:1}.portfolio-previews figure{width:calc(33.333% - 7px)}.portfolio-previews img{width:100%;height:82px}}
+
+/* Fix: keep the password visibility control from covering the input on touch devices. */
+.client-portal .auth-forms .password-wrap{position:relative;width:100%;min-width:0}
+.client-portal .auth-forms .password-wrap input{display:block;width:100%;min-width:0;padding-right:76px!important;position:relative;z-index:1;touch-action:manipulation}
+.client-portal .auth-forms form .password-toggle{position:absolute;z-index:2;right:7px;top:50%;width:auto!important;min-width:48px;min-height:34px!important;height:34px;padding:6px 10px;transform:translateY(-50%);touch-action:manipulation}
+.client-portal .auth-forms form .password-toggle:hover{transform:translateY(-50%)}
