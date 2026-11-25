@@ -4,7 +4,7 @@
 if (typeof ServiceWorkerGlobalScope !== 'undefined' && self instanceof ServiceWorkerGlobalScope) {
  const CACHE_NAME = 'hillaxx-public-shell-v2';
  const SHELL = [
-  '/', '/index.html', '/privacy-premium.html', '/terms-premium.html',
+  '/privacy-premium.html', '/terms-premium.html',
   '/client-reviews', '/client-reviews.html', '/portal.css', '/portal-config.js',
   '/hillaxx-public-reviews.js'
  ];
